@@ -1,0 +1,21 @@
+# ============================================================
+# Save as: conf/base/parameters_data_drifts.yml
+# Flat keys, matching your group's style (params:suite_name etc.)
+# ============================================================
+
+drift_split_frac: 0.5        # half reference, half current
+drift_random_state: 42       # so the split is reproducible
+drift_target: price          # the value the model predicts
+
+drift_categorical_features:
+  - brand
+  - model_name
+  - transmission
+  - fuel_type
+
+# columns NOT compared as features (target + id / helper columns)
+drift_exclude_columns:
+  - price
+  - index
+  - datetime
+  - car_id
