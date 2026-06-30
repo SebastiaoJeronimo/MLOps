@@ -79,9 +79,14 @@ y_val:
   type: pandas.ParquetDataset
   filepath: data/05_model_input/y_val.parquet
 
+best_params:
+  type: json.JSONDataset
+  filepath: data/06_models/best_params.json
+
 predictions:
   type: pandas.CSVDataset
   filepath: data/07_model_output/predictions.csv
+
 
 car_price_model_input:
   type: pandas.ParquetDataset
