@@ -1,0 +1,12 @@
+# This is a boilerplate parameters config generated for pipeline 'data_feature_engineering'
+# using Kedro 1.3.1.
+#
+# Documentation for this file format can be found in "Parameters"
+# Link: https://docs.kedro.org/en/1.3.1/configuration/parameters.html
+
+
+feature_engineering:
+  feature_group_name: car_features_clean_eng
+  feature_group_version: 1
+  feature_group_description: "Feature cleaned engineered dataset"
+  feature_group_feature_descriptions: []

@@ -1,0 +1,85 @@
+# Here you can define all your datasets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/catalog-data/introduction/#data-catalog
+
+car_train_raw:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/train.csv
+
+car_test_raw:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/test.csv
+
+data_quality_report:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/data_quality_report.csv
+
+car_train_clean:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/car_train_clean.parquet
+
+car_test_clean:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/car_test_clean.parquet
+
+car_train_split:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/car_train_split.parquet
+
+car_val_split:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/car_val_split.parquet
+
+preprocess_train:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/preprocess_train.parquet
+
+preprocess_val:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/preprocess_val.parquet
+
+preprocessed_test: 
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/preprocess_val.parquet
+
+imputation_stats:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/imputation_stats.pkl
+
+preprocessing_artifacts:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/preprocessing_artifacts.pkl
+
+car_feature_group_metadata:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/08_reporting/car_feature_group_metadata.json
+
+car_feature_view_metadata:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/08_reporting/car_feature_view_metadata.json
+
+X_train:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/X_train.parquet
+
+y_train:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/y_train.parquet
+
+X_val:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/X_val.parquet
+
+y_val:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/y_val.parquet
+
+predictions:
+  type: pandas.CSVDataset
+  filepath: data/07_model_output/predictions.csv
+

@@ -1,0 +1,29 @@
+[project]
+name = "my-mlops-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "category-encoders>=2.9.0",
+    "confluent-kafka>=2.14.0",
+    "docker>=7.1.0",
+    "evidently>=0.7.21",
+    "great-expectations>=1.16.1",
+    "hopsworks>=4.8.1",
+    "ipywidgets>=8.1.8",
+    "jupyterlab>=4.5.6",
+    "kedro-mlflow>=2.0.2",
+    "lightgbm>=4.6.0",
+    "mlflow>=3.11.1",
+    "optuna>=4.8.0",
+    "optuna-integration>=4.9.0",
+    "prefect>=3.6.27",
+    "rapidfuzz>=3.14.5",
+    "setuptools<81",
+    "shap>=0.52.0",
+    "ucimlrepo>=0.0.7",
+    "vadersentiment>=3.3.2",
+    "xgboost>=3.3.0",
+    "ydata-profiling<=4.18.3",
+]

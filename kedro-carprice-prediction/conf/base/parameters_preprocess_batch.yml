@@ -1,0 +1,23 @@
+# This is a boilerplate parameters config generated for pipeline 'preprocess_batch'
+# using Kedro 1.3.1.
+#
+# Documentation for this file format can be found in "Parameters"
+# Link: https://docs.kedro.org/en/1.3.1/configuration/parameters.html
+
+preprocess_batch:
+  car_batch_basic_clean:
+    type: MemoryDataset
+
+  car_batch_standardized:
+    type: MemoryDataset
+
+  car_batch_imputed:
+    type: MemoryDataset
+
+  car_batch_fe:
+    type: pandas.ParquetDataset
+    filepath: data/04_feature/car_batch_fe.parquet
+
+  car_batch_features:
+    type: pandas.ParquetDataset
+    filepath: data/05_model_input/car_batch_features.parquet

@@ -1,0 +1,62 @@
+artifact_path: mlflow-artifacts:/1/models/m-086ee8e08ddb461fb1ffda1d588d81c6/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.13.7
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+is_signature_from_type_hint: false
+mlflow_version: 3.11.1
+model_id: m-086ee8e08ddb461fb1ffda1d588d81c6
+model_size_bytes: 28327
+model_uuid: m-086ee8e08ddb461fb1ffda1d588d81c6
+prompts: null
+run_id: 45ba0976bbeb457e90a7003d7843a78a
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "long", "name": "car_id", "required": true}, {"type": "double",
+    "name": "brand", "required": true}, {"type": "double", "name": "model", "required":
+    true}, {"type": "double", "name": "year", "required": true}, {"type": "double",
+    "name": "mileage", "required": true}, {"type": "double", "name": "tax", "required":
+    true}, {"type": "double", "name": "mpg", "required": true}, {"type": "double",
+    "name": "engine_size", "required": true}, {"type": "double", "name": "paint_quality_pct",
+    "required": true}, {"type": "double", "name": "has_damage", "required": true},
+    {"type": "double", "name": "age", "required": true}, {"type": "double", "name":
+    "mileage_per_litre", "required": true}, {"type": "double", "name": "efficiency_ratio",
+    "required": true}, {"type": "double", "name": "transmission_Manual", "required":
+    true}, {"type": "double", "name": "transmission_Other", "required": true}, {"type":
+    "double", "name": "transmission_Semi-Automatic", "required": true}, {"type": "double",
+    "name": "transmission_Unkown", "required": true}, {"type": "double", "name": "fuel_type_Electric",
+    "required": true}, {"type": "double", "name": "fuel_type_Hybrid", "required":
+    true}, {"type": "double", "name": "fuel_type_Other", "required": true}, {"type":
+    "double", "name": "fuel_type_Petrol", "required": true}, {"type": "double", "name":
+    "previous_owners_1.0", "required": true}, {"type": "double", "name": "previous_owners_2.0",
+    "required": true}, {"type": "double", "name": "previous_owners_3.0", "required":
+    true}, {"type": "double", "name": "previous_owners_4.0", "required": true}, {"type":
+    "double", "name": "previous_owners_6.21772443455894", "required": true}, {"type":
+    "double", "name": "previous_owners_6.227897962331817", "required": true}, {"type":
+    "double", "name": "previous_owners_6.230179577896532", "required": true}, {"type":
+    "double", "name": "previous_owners_6.233082169469183", "required": true}, {"type":
+    "double", "name": "previous_owners_6.2417786290739095", "required": true}, {"type":
+    "double", "name": "previous_owners_6.2458349512166365", "required": true}, {"type":
+    "double", "name": "previous_owners_6.248251195613699", "required": true}, {"type":
+    "double", "name": "previous_owners_6.258230522496533", "required": true}, {"type":
+    "double", "name": "previous_owners_6.258370664185211", "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1,
+    1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-06-29 21:52:26.649851'

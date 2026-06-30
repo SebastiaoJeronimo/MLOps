@@ -1,0 +1,7 @@
+
+suite_name: car_quality_raw_
+feature_group_name: raw_car_data
+feature_group_version: 2
+feature_group_description: "Raw car listings dataset"
+feature_group_feature_descriptions:  
+fail_pipeline_on_error: true
