@@ -1,5 +1,7 @@
 # MLOps Car Price Project
 
+**Students:** Diogo Tibério (20250341), José Montez (20250351), Henrique Figueiredo (20250433), Sebastião Jerónimo (20240660)
+
 Predict used car prices with **Kedro** pipelines, **MLflow** model registry, and an optional **FastAPI** API.
 
 ## Repository layout

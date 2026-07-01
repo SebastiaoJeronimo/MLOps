@@ -59,12 +59,20 @@ def model_train(
     y_val: pd.Series,
     parameters: Dict[str, Any],
     best_columns: list = None,
+    best_params: dict = None,  # <-- Optuna output, takes priority over params:model_params
 ):
     """Fits the configured model family, evaluates on the validation
-    split, and logs metrics -- all inside one nested mlflow run.
+    split, and logs metrics inside one nested mlflow run.
 
-    If parameters['use_feature_selection'] is set and best_columns is
-    provided, restricts X_train/X_val to those columns first.
+    Hyperparameter resolution order (highest priority first):
+      1. best_params -- output of the Optuna hyperparameter_tuning pipeline,
+         persisted as best_params.json and wired in from the catalog.
+      2. params:model_params -- static fallback defined in parameters.yml,
+         used when running model_train standalone without a prior HPO study.
+
+    This means the same node works both with and without Optuna -- just wire
+    best_params="best_params" in pipeline.py when HPO has run, or omit it
+    (defaulting to None) to fall back to the static params.
     """
     model_type = parameters["model_type"]
     if model_type not in _MODEL_REGISTRY:
@@ -72,6 +80,15 @@ def model_train(
             f"Unknown or unavailable model_type '{model_type}'. "
             f"Available: {list(_MODEL_REGISTRY.keys())}"
         )
+
+    # Resolve hyperparameters -- Optuna output wins over static params
+    resolved_params = best_params or parameters.get("model_params") or {}
+    logger.info(
+        "Training %s with params: %s (source: %s)",
+        model_type,
+        resolved_params,
+        "optuna" if best_params else "parameters.yml",
+    )
 
     autolog_fn = _AUTOLOG_FN.get(model_type, mlflow.sklearn.autolog)
     autolog_fn(
@@ -86,9 +103,9 @@ def model_train(
         X_train = X_train[best_columns]
         X_val = X_val[best_columns]
 
-    with mlflow.start_run(nested=True, run_name=f"{model_type}_train") as run:
+    with mlflow.start_run(nested=True, run_name=f"{model_type}_champion_train") as run:
 
-        model = _MODEL_REGISTRY[model_type](parameters.get("model_params"))
+        model = _MODEL_REGISTRY[model_type](resolved_params)
         model.fit(X_train, np.ravel(y_train))
 
         y_train_pred = model.predict(X_train)
@@ -102,13 +119,17 @@ def model_train(
         }
 
         mlflow.log_metrics(metrics)
-        mlflow.set_tags({"model_family": model_type})
+        # Log whichever params were actually used, so the run is self-contained
+        mlflow.log_params(resolved_params)
+        mlflow.set_tags({
+            "model_family": model_type,
+            "hpo": "optuna" if best_params else "none",
+        })
 
         sample = X_train.iloc[:100]
         signature = infer_signature(sample, model.predict(sample))
 
         log_fn = _MLFLOW_LOG_MODEL[model_type]
-
         model_info = log_fn(
             model,
             name=model_type,
@@ -119,7 +140,6 @@ def model_train(
 
         client = mlflow.MlflowClient()
         champion_alias = parameters.get("champion_alias", "Champion")
-
         client.set_registered_model_alias(
             parameters["registered_model_name"],
             champion_alias,
@@ -133,59 +153,25 @@ def model_train(
             "registered_model_name": parameters["registered_model_name"],
             "champion_alias": champion_alias,
             "run_id": run.info.run_id,
+            "hpo_params_used": resolved_params,
         }
 
-        logger.info("Logged %s model in run %s", model_type, run.info.run_id)
-
-    return model, metrics, registration_metadata
-
-
-def log_and_register_champion(
-    model,
-    metrics: dict,
-    run_id: str,
-    X_train: pd.DataFrame,
-    parameters: Dict[str, Any],
-) -> dict:
-    """Re-open the SAME nested run by run_id to attach the model artifact,
-    then register a new version and unconditionally point @Champion at it.
-    """
-    model_type = parameters["model_type"]
-    registered_model_name = parameters["registered_model_name"]
-    champion_alias = parameters.get("champion_alias", "Champion")
-
-    with mlflow.start_run(run_id=run_id):
-        signature = infer_signature(X_train, model.predict(X_train.iloc[:5]))
-        log_fn = _MLFLOW_LOG_MODEL.get(model_type, mlflow.sklearn.log_model)
-        model_info = log_fn(
-            model,
-            name=model_type,
-            signature=signature,
-            input_example=X_train.iloc[[0]],
-            registered_model_name=registered_model_name,
+        logger.info(
+            "Logged %s Champion (v%s) in run %s | rmse=%.2f r2=%.4f",
+            model_type,
+            model_info.registered_model_version,
+            run.info.run_id,
+            metrics["rmse"],
+            metrics["r2"],
         )
 
-    client = mlflow.MlflowClient()
-    client.set_registered_model_alias(
-        registered_model_name, champion_alias, model_info.registered_model_version
-    )
-    logger.info(f"Registered v{model_info.registered_model_version} and set as '{champion_alias}'.")
-
-    return {
-        "model_type": model_type,
-        "model_uri": model_info.model_uri,
-        "version": model_info.registered_model_version,
-        "registered_model_name": registered_model_name,
-        "champion_alias": champion_alias,
-        "run_id": run_id,
-    }
+    return model, metrics, registration_metadata
 
 
 def build_training_report(
     registration_metadata: dict, metrics: dict, X_train: pd.DataFrame, X_val: pd.DataFrame
 ) -> pd.DataFrame:
-    """Summarize the run as a single-row DataFrame -- model identity,
-    validation metrics, and dataset shape."""
+    """Summarize the run as a single-row DataFrame."""
     return pd.DataFrame([{
         **registration_metadata,
         "rmse": metrics["rmse"],

@@ -8,7 +8,6 @@ dependencies = [
     "category-encoders>=2.9.0",
     "confluent-kafka>=2.14.0",
     "docker>=7.1.0",
-    "evidently>=0.7.21",
     "great-expectations>=1.16.1",
     "hopsworks>=4.8.1",
     "ipywidgets>=8.1.8",
