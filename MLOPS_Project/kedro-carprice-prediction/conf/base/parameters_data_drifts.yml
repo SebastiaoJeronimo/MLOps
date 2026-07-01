@@ -9,7 +9,7 @@ drift_target: price          # the value the model predicts
 
 drift_categorical_features:
   - brand
-  - model_name
+  - model
   - transmission
   - fuel_type
 

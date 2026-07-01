@@ -8,9 +8,10 @@ from typing import Any
 
 import mlflow
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import AliasChoices, BaseModel, Field
 
+from app import history
 from app.model_loader import load_champion_model
 from app.preprocess import preprocess_raw_cars
 
@@ -94,31 +95,66 @@ def readiness_check():
 
 
 def _car_to_row(car: CarFeatures) -> dict[str, Any]:
-    return {k: v for k, v in car.model_dump().items() if v is not None}
+    row = car.model_dump()
+    if row.get("car_id") is None:
+        row["car_id"] = 0
+    return {k: v for k, v in row.items() if v is not None}
+
+
+@app.get("/predictions/history")
+def list_prediction_history(limit: int = Query(default=50, ge=1, le=500)):
+    return {"count": limit, "records": history.list_records(limit=limit)}
+
+
+@app.get("/predictions/history/{record_id}")
+def get_prediction_history(record_id: str):
+    record = history.get_record(record_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
+
+
+def _run_prediction(cars: list[CarFeatures]) -> list[float]:
+    if _model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    if not cars:
+        raise HTTPException(status_code=400, detail="At least one car is required")
+    raw_df = pd.DataFrame([_car_to_row(car) for car in cars])
+    features = preprocess_raw_cars(raw_df)
+    preds = _model.predict(features)
+    if hasattr(preds, "tolist"):
+        preds = preds.tolist()
+    return [float(p) for p in preds]
 
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest):
-    if _model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-
-    if not req.cars:
-        raise HTTPException(status_code=400, detail="At least one car is required")
-
     try:
-        raw_df = pd.DataFrame([_car_to_row(car) for car in req.cars])
-        features = preprocess_raw_cars(raw_df)
-        preds = _model.predict(features)
-        if hasattr(preds, "tolist"):
-            preds = preds.tolist()
-        return PredictResponse(predictions=[float(p) for p in preds])
+        predictions = _run_prediction(req.cars)
+        history.append_record(
+            {"cars": [_car_to_row(car) for car in req.cars]},
+            {"predictions": predictions},
+        )
+        return PredictResponse(predictions=predictions)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc
 
 
 @app.post("/predict/single")
 def predict_single(car: CarFeatures):
-    result = predict(PredictRequest(cars=[car]))
-    return {"prediction": result.predictions[0]}
+    try:
+        request_payload = _car_to_row(car)
+        prediction = _run_prediction([car])[0]
+        response_payload = {"prediction": prediction}
+        history.append_record(request_payload, response_payload)
+        return response_payload
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc

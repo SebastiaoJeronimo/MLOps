@@ -1,16 +1,15 @@
 """Nodes for the data_drifts pipeline.
 
 This pipeline checks whether new data has drifted away from the data the model
-was trained on. It splits the model-input data into a reference half and a
+was trained on. It splits the cleaned training data into a reference half and a
 current half, runs an Evidently data drift report, and saves the HTML report
 plus a small metrics file.
 """
 import logging
 
 import pandas as pd
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset
-from evidently import ColumnMapping
+from evidently import DataDefinition, Dataset, Regression, Report
+from evidently.presets import DataDriftPreset
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 def prepare_drift_data(model_input: pd.DataFrame) -> pd.DataFrame:
     """Drop datetime columns.
 
-    Evidently 0.6.5 crashes on datetime columns with newer pandas, and we don't
+    Evidently crashes on datetime columns with newer pandas, and we don't
     need dates to detect drift, so we simply remove them.
     """
     dt_cols = model_input.select_dtypes(include=["datetime", "datetimetz"]).columns.tolist()
@@ -41,28 +40,43 @@ def evaluate_drift(
     exclude_columns: list,
 ):
     """Run the Evidently drift report and return the HTML + the main metrics."""
-    # tell Evidently the role of each column
-    exclude = categorical_features + exclude_columns
-    num_features = [c for c in reference.columns if c not in exclude]
+    exclude = set(exclude_columns)
+    num_features = [c for c in reference.columns if c not in exclude and c not in categorical_features]
+    drift_cols = categorical_features + num_features
+    logger.info("Drift columns: %s (target=%s)", drift_cols, target)
 
-    column_mapping = ColumnMapping()
-    column_mapping.target = target
-    column_mapping.categorical_features = categorical_features
-    column_mapping.numerical_features = num_features
+    data_definition = DataDefinition(
+        id_column="car_id" if "car_id" in reference.columns else None,
+        categorical_columns=categorical_features,
+        numerical_columns=num_features,
+        regression=[Regression(target=target)],
+    )
+    reference_ds = Dataset.from_pandas(reference, data_definition=data_definition)
+    current_ds = Dataset.from_pandas(current, data_definition=data_definition)
 
-    # build and run the report
-    report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=reference, current_data=current, column_mapping=column_mapping)
+    report = Report([DataDriftPreset(columns=drift_cols)])
+    snapshot = report.run(current_data=current_ds, reference_data=reference_ds)
 
-    # pull out the main numbers (same helper as in the notebook)
-    result = report.as_dict()["metrics"][0]["result"]
+    drift_summary = next(
+        (
+            m
+            for m in snapshot.dict()["metrics"]
+            if "DriftedColumnsCount" in m.get("metric_name", "")
+        ),
+        None,
+    )
+    if drift_summary is None:
+        raise RuntimeError("DriftedColumnsCount metric not found in Evidently report")
+
+    count = float(drift_summary["value"]["count"])
+    share = float(drift_summary["value"]["share"])
+    total = int(round(count / share)) if share else len(drift_cols)
     metrics = {
-        "dataset_drift": result["dataset_drift"],
-        "drifted_columns": result["number_of_drifted_columns"],
-        "total_columns": result["number_of_columns"],
-        "share_drifted": round(result["share_of_drifted_columns"], 3),
+        "dataset_drift": share >= 0.5,
+        "drifted_columns": int(count),
+        "total_columns": total,
+        "share_drifted": round(share, 3),
     }
     logger.info("Drift result: %s", metrics)
 
-    # the catalog saves the HTML as a file and the metrics as JSON
-    return report.get_html(), metrics
+    return snapshot.get_html_str(as_iframe=False), metrics

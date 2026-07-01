@@ -7,7 +7,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=prepare_drift_data,
-                inputs=dict(model_input="car_price_model_input"),
+                inputs=dict(model_input="car_train_clean"),
                 outputs="drift_data",
                 name="prepare_drift_data_node",
             ),

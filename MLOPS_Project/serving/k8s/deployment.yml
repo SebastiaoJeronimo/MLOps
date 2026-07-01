@@ -5,7 +5,7 @@ metadata:
   labels:
     app: car-price-api
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: car-price-api
@@ -16,13 +16,23 @@ spec:
     spec:
       containers:
         - name: car-price-api
-          image: car-price-api:v1.0
+          image: car-price-api-kubernetes:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:
             - name: MLFLOW_TRACKING_URI
               value: "http://host.docker.internal:8080"
+            - name: MLFLOW_ARTIFACT_MOUNT
+              value: "/mlartifacts"
+            - name: PREDICTION_HISTORY_DIR
+              value: "/data/predictions"
+          volumeMounts:
+            - name: prediction-history
+              mountPath: /data/predictions
+            - name: mlartifacts
+              mountPath: /mlartifacts
+              readOnly: true
           resources:
             requests:
               memory: "512Mi"
@@ -42,3 +52,12 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 10
+      volumes:
+        - name: prediction-history
+          hostPath:
+            path: /tmp/car-price-history
+            type: DirectoryOrCreate
+        - name: mlartifacts
+          hostPath:
+            path: /mlartifacts
+            type: Directory

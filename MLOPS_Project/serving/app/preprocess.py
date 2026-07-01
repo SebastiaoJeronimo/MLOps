@@ -53,6 +53,10 @@ def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def fix_data_types(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    if "car_id" not in df.columns:
+        df["car_id"] = 0
+    else:
+        df["car_id"] = pd.to_numeric(df["car_id"], errors="coerce").fillna(0).astype(int)
     numeric_cols = [
         "year",
         "mileage",

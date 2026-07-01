@@ -18,6 +18,9 @@ data/**
 # also keep all .gitkeep files
 !.gitkeep
 
+# default HPO fallback so production_full_train_process works on first run
+!data/06_models/best_params.json
+
 # ignore kedro-viz metadata
 .viz
 

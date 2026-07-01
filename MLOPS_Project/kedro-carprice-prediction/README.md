@@ -69,10 +69,22 @@ Use **`kedro-carprice-prediction/`** for both terminals (same `.venv`).
 
 ```powershell
 cd C:\IMS\MLOps\MLOps\MLOPS_Project\kedro-carprice-prediction
-uv run mlflow server --host 127.0.0.1 --port 8080 --default-artifact-root ../mlartifacts --backend-store-uri sqlite:///../mlflow.db
+uv run mlflow server --host 0.0.0.0 --port 8080 --default-artifact-root ../mlartifacts --backend-store-uri sqlite:///../mlflow.db --serve-artifacts --allowed-hosts "localhost:8080,127.0.0.1:8080,host.docker.internal:8080"
 ```
 
 Open: **http://127.0.0.1:8080**
+
+Use `--host 0.0.0.0` so Docker can reach MLflow. Do **not** put `0.0.0.0` in Kedro's tracking URI.
+
+### MLflow URLs — don't mix these up
+
+| What | Value | When |
+|------|--------|------|
+| MLflow server `--host` | `0.0.0.0` | Terminal 1 — server bind address |
+| MLflow `--allowed-hosts` | `localhost:8080,127.0.0.1:8080,host.docker.internal:8080` | Required for Docker API |
+| Browser / MLflow UI | `http://127.0.0.1:8080` | Open in browser |
+| Kedro `MLFLOW_TRACKING_URI` | `http://127.0.0.1:8080` | Terminal 2 — Kedro on the host |
+| Docker `MLFLOW_TRACKING_URI` | `http://host.docker.internal:8080` | API container |
 
 ### Terminal 2 — Kedro pipelines
 
@@ -81,7 +93,29 @@ cd C:\IMS\MLOps\MLOps\MLOPS_Project\kedro-carprice-prediction
 $env:MLFLOW_TRACKING_URI = "http://127.0.0.1:8080"
 ```
 
-`MLFLOW_TRACKING_URI` tells Kedro where the MLflow server is (same as `mlflow.set_tracking_uri(...)` in `notebooks/03_MLflow_CarPrice.ipynb`).
+`MLFLOW_TRACKING_URI` is the address Kedro **connects to** — use `127.0.0.1`, not `0.0.0.0` (same as `mlflow.set_tracking_uri(...)` in `notebooks/03_MLflow_CarPrice.ipynb`).
+
+### Do I need MLflow running?
+
+**Yes — keep Terminal 1 (MLflow server) open for the whole workflow.**
+
+| Step | MLflow required? | Why |
+|------|------------------|-----|
+| `production_full_train_process` | **Yes** | Logs the run and **registers** `car_price_model` with the **Champion** alias in the Model Registry |
+| `production_full_prediction_process` | **Yes** | `model_predict` loads **`models:/car_price_model@Champion`** from the registry |
+| Docker / Kubernetes API | **Yes** | FastAPI loads Champion at startup — `http://host.docker.internal:8080` in Docker/K8s pods |
+
+The model files live under `../mlartifacts/`, but the **registry** (which version is Champion) is served by **MLflow on port 8080**. If MLflow is stopped, Kedro predict and the HTTP API cannot resolve `car_price_model@Champion`.
+
+**Typical order:**
+
+1. Start MLflow (Terminal 1) — leave it running  
+2. Run train pipeline (Terminal 2) — creates Champion in registry  
+3. Optionally run predict pipeline — still needs MLflow  
+4. Copy `.pkl` files to `serving/artifacts/`  
+5. Start Docker or Kubernetes API — **MLflow must still be running**
+
+Verify Champion exists: http://127.0.0.1:8080 → **Models** → `car_price_model` → alias **Champion**
 
 ---
 
@@ -96,6 +130,7 @@ $env:MLFLOW_TRACKING_URI = "http://127.0.0.1:8080"
 | `model_train` | Train model, log metrics, register Champion in MLflow |
 | `preprocess_batch` | Apply saved preprocessing to `test.csv` |
 | `model_predict` | Load Champion model, write `predictions.csv` |
+| `data_drifts` | Evidently drift report → `data/08_reporting/drift_report.html` |
 | `production_full_train_process` | **All training steps in one command** |
 | `production_full_prediction_process` | **All prediction steps in one command** |
 
@@ -127,6 +162,29 @@ uv run kedro run --pipeline production_full_prediction_process
 
 Runs: `data_cleaning` → `preprocess_batch` → `model_predict`  
 Output: `data/07_model_output/predictions.csv`
+
+### Data drift
+
+```powershell
+$env:MLFLOW_TRACKING_URI = "http://127.0.0.1:8080"
+$env:PYTHONUTF8 = "1"
+uv run kedro run --pipeline data_drifts
+```
+
+**Expected outputs** (pipeline succeeded if both exist and `drift_report.html` is non-empty):
+
+| File | Path |
+|------|------|
+| Drift HTML report | `data/08_reporting/drift_report.html` |
+| Drift metrics | `data/08_reporting/drift_metrics.json` |
+
+```powershell
+Test-Path .\data\08_reporting\drift_report.html
+Get-Content .\data\08_reporting\drift_metrics.json
+Start-Process .\data\08_reporting\drift_report.html
+```
+
+**MLflow must still be running** — the kedro-mlflow plugin connects at pipeline startup.
 
 ---
 
@@ -180,6 +238,8 @@ Run in order:
 | Cleaned data | `data/02_intermediate/` |
 | Model inputs | `data/05_model_input/` |
 | Predictions | `data/07_model_output/predictions.csv` |
+| **Drift report (verify pipeline)** | `data/08_reporting/drift_report.html` |
+| Drift metrics | `data/08_reporting/drift_metrics.json` |
 
 ---
 
@@ -190,23 +250,74 @@ Run in order:
 | `No such command 'registry'` | Run commands from `kedro-carprice-prediction/`, not parent `MLOPS_Project/` |
 | `ModuleNotFoundError` | `uv add <package>` or `uv sync` |
 | MLflow connection refused | Start Terminal 1 MLflow server first |
+| Docker API times out loading Champion | Restart MLflow with `--serve-artifacts` and `--allowed-hosts "localhost:8080,127.0.0.1:8080,host.docker.internal:8080"` |
+| K8s pods crash loading model | Same MLflow command — see **Deployment B** |
 | `No module named 'kedro_datasets'` | `uv add kedro-datasets` |
 | Hopsworks errors | Skip `data_quality` or add `conf/local/credentials.yml` |
 
 ---
 
-## HTTP API (FastAPI + Docker)
+## Deployment — HTTP API
 
-After `production_full_train_process`, copy preprocessing pickles for the API (one time):
+**Prerequisite:** Run `production_full_train_process` first so **`car_price_model@Champion`** exists in MLflow. **Keep the MLflow server running** (Terminal 1) — the API loads the model from the **Model Registry**, not from a local `.pkl` file alone.
+
+After training, copy preprocessing pickles for the API (one time):
 
 ```powershell
 Copy-Item data\04_feature\imputation_stats.pkl ..\serving\artifacts\
 Copy-Item data\04_feature\preprocessing_artifacts.pkl ..\serving\artifacts\
 ```
 
-Full Docker and `/predict` instructions: [../serving/README.md](../serving/README.md)
+Keep the MLflow server running (Terminal 1) while the API container or Kubernetes pods start. If MLflow stops, `/ready` may fail because Champion cannot be loaded.
 
-Keep the MLflow server running (Terminal 1) while the API container starts.
+### Deployment A — Docker (Week 4)
+
+Single container. Fastest way to demo `/predict` and Swagger.
+
+Full steps: [../serving/README.md](../serving/README.md) **Option A**
+
+```powershell
+cd ..\serving
+docker build -t car-price-api .
+docker run -p 8000:8000 `
+  -e MLFLOW_TRACKING_URI=http://host.docker.internal:8080 `
+  -v C:\IMS\MLOps\MLOps\MLOPS_Project\mlartifacts:/mlartifacts:ro `
+  -v car_price_history:/data/predictions `
+  car-price-api
+```
+
+### Deployment B — Kubernetes / KIND (Week 5)
+
+**2 pods minimum** (each runs the full model). HPA scales 2–6 pods under load. Shared prediction history via hostPath volume.
+
+Prerequisites: Docker Desktop, kind, kubectl.
+
+**Terminal 1 — MLflow** (pods reach the host via `host.docker.internal:8080`):
+
+```powershell
+cd C:\IMS\MLOps\MLOps\MLOPS_Project\kedro-carprice-prediction
+uv run mlflow server --host 0.0.0.0 --port 8080 --default-artifact-root ../mlartifacts --backend-store-uri sqlite:///../mlflow.db --serve-artifacts --allowed-hosts "localhost:8080,127.0.0.1:8080,host.docker.internal:8080"
+```
+
+**Terminal 2 — KIND (copy-paste all):**
+
+```powershell
+cd C:\IMS\MLOps\MLOps\MLOPS_Project\serving
+docker build -t car-price-api-kubernetes:latest .
+kind create cluster --config k8s/kind.yml --name car-price-cluster
+kind load docker-image car-price-api-kubernetes:latest --name car-price-cluster
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+kubectl patch -n kube-system deployment metrics-server --type=json --patch-file k8s/metrics-server-patch.json
+kubectl apply -f k8s/deployment.yml
+kubectl apply -f k8s/service.yml
+kubectl apply -f k8s/hpa.yml
+kubectl get pods
+kubectl port-forward service/car-price-api 8000:8000
+```
+
+Command reference: [../serving/README.md](../serving/README.md) **Option C**.
+
+Open http://localhost:8000/docs — try `POST /predict/single` and `GET /predictions/history`.
 
 ---
 

@@ -16,8 +16,12 @@ COPY app ./app
 COPY artifacts ./artifacts
 
 ENV MLFLOW_TRACKING_URI=http://host.docker.internal:8080
+ENV MLFLOW_ARTIFACT_MOUNT=/mlartifacts
 ENV REGISTERED_MODEL_NAME=car_price_model
 ENV CHAMPION_ALIAS=Champion
+ENV PREDICTION_HISTORY_DIR=/data/predictions
+
+RUN mkdir -p /data/predictions
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
