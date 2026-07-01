@@ -2340,9 +2340,12 @@ dependencies = [
     { name = "jupyterlab" },
     { name = "kedro" },
     { name = "kedro-datasets" },
+<<<<<<< HEAD:kedro-carprice-prediction/uv.lock
+=======
     { name = "kedro-mlflow" },
     { name = "lightgbm" },
     { name = "mlflow" },
+>>>>>>> f3b4c5ba77dcbb7e7cc14d39745d946c8e493857:MLOPS_Project/kedro-carprice-prediction/uv.lock
     { name = "notebook" },
     { name = "optuna" },
     { name = "rapidfuzz" },
@@ -2381,9 +2384,12 @@ requires-dist = [
     { name = "jupyterlab", specifier = ">=3.0" },
     { name = "kedro", specifier = "~=1.3.1" },
     { name = "kedro-datasets", specifier = ">=9.5.0" },
+<<<<<<< HEAD:kedro-carprice-prediction/uv.lock
+=======
     { name = "kedro-mlflow", specifier = ">=2.0.3" },
     { name = "lightgbm", specifier = ">=4.6.0" },
     { name = "mlflow", specifier = ">=3.14.0" },
+>>>>>>> f3b4c5ba77dcbb7e7cc14d39745d946c8e493857:MLOPS_Project/kedro-carprice-prediction/uv.lock
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=1.0,<2.1" },
     { name = "nbsphinx", marker = "extra == 'docs'", specifier = "==0.8.1" },
     { name = "notebook" },
@@ -2416,6 +2422,8 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD:kedro-carprice-prediction/uv.lock
+=======
 name = "kedro-mlflow"
 version = "2.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2430,6 +2438,7 @@ wheels = [
 ]
 
 [[package]]
+>>>>>>> f3b4c5ba77dcbb7e7cc14d39745d946c8e493857:MLOPS_Project/kedro-carprice-prediction/uv.lock
 name = "kedro-telemetry"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2591,6 +2600,8 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD:kedro-carprice-prediction/uv.lock
+=======
 name = "lightgbm"
 version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2623,6 +2634,7 @@ wheels = [
 ]
 
 [[package]]
+>>>>>>> f3b4c5ba77dcbb7e7cc14d39745d946c8e493857:MLOPS_Project/kedro-carprice-prediction/uv.lock
 name = "markdown-it-py"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }

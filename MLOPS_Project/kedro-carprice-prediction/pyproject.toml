@@ -19,10 +19,14 @@ dependencies = [
     "xgboost>=3.2.0",
     "lightgbm>=4.6.0",
     "great-expectations>=1.18.2",
+<<<<<<< HEAD:kedro-carprice-prediction/pyproject.toml
+    "kedro-datasets>=9.5.0",
+=======
     "kedro-mlflow>=2.0.3",
     "optuna>=4.9.0",
     "kedro-datasets>=9.5.0",
     "evidently>=0.6.5",
+>>>>>>> f3b4c5ba77dcbb7e7cc14d39745d946c8e493857:MLOPS_Project/kedro-carprice-prediction/pyproject.toml
 ]
 
 [project.scripts]
