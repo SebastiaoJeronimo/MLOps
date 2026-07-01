@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local study materials (Cursor context — do not commit)
+Labs/
+Software/
+Theory/
+Project_context/

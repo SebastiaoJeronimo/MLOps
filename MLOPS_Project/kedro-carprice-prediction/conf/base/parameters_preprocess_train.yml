@@ -1,0 +1,7 @@
+# Parameters for preprocess_train pipeline (not catalog entries).
+
+scaler_method: Robust
+target_col: price
+engineered_group_name: engineered_car_features
+engineered_group_description:
+  - Engineered features generated from the cleaned car dataset for model training and inference.

@@ -1,0 +1,6 @@
+# Placeholder — copy from kedro after training:
+#   imputation_stats.pkl
+#   preprocessing_artifacts.pkl
+#
+# From kedro-carprice-prediction/:
+#   Copy-Item data\04_feature\*.pkl ..\serving\artifacts\

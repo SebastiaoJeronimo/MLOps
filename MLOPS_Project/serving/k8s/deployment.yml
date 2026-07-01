@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: car-price-api
+  labels:
+    app: car-price-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: car-price-api
+  template:
+    metadata:
+      labels:
+        app: car-price-api
+    spec:
+      containers:
+        - name: car-price-api
+          image: car-price-api:v1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://host.docker.internal:8080"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10

@@ -1,7 +1,4 @@
-# Here you can define all your datasets by using simple YAML syntax.
-#
-# Documentation for this file format can be found in "The Data Catalog"
-# Link: https://docs.kedro.org/en/stable/catalog-data/introduction/#data-catalog
+# Data catalog — dataset names must match pipeline node inputs/outputs.
 
 car_train_raw:
   type: pandas.CSVDataset
@@ -31,17 +28,22 @@ car_val_split:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/car_val_split.parquet
 
-preprocess_train:
-  type: pandas.ParquetDataset
-  filepath: data/03_primary/preprocess_train.parquet
+# In-memory pipeline intermediates
+preprocessed_train:
+  type: MemoryDataset
 
-preprocess_val:
-  type: pandas.ParquetDataset
-  filepath: data/03_primary/preprocess_val.parquet
+preprocessed_val:
+  type: MemoryDataset
 
-preprocessed_test: 
+car_batch_imputed:
+  type: MemoryDataset
+
+car_batch_fe:
+  type: MemoryDataset
+
+preprocessed_test:
   type: pandas.ParquetDataset
-  filepath: data/03_primary/preprocess_val.parquet
+  filepath: data/03_primary/preprocess_test.parquet
 
 imputation_stats:
   type: pickle.PickleDataset
@@ -51,11 +53,11 @@ preprocessing_artifacts:
   type: pickle.PickleDataset
   filepath: data/04_feature/preprocessing_artifacts.pkl
 
-car_feature_group_metadata:
+feature_group_metadata:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: json.JSONDataset
-    filepath: data/08_reporting/car_feature_group_metadata.json
+    filepath: data/08_reporting/feature_group_metadata.json
 
 car_feature_view_metadata:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
@@ -79,7 +81,21 @@ y_val:
   type: pandas.ParquetDataset
   filepath: data/05_model_input/y_val.parquet
 
+trained_model:
+  type: MemoryDataset
+
+val_metrics:
+  type: MemoryDataset
+
+registration_metadata:
+  type: MemoryDataset
+
+model_train_report:
+  type: MemoryDataset
+
+champion_model:
+  type: MemoryDataset
+
 predictions:
   type: pandas.CSVDataset
   filepath: data/07_model_output/predictions.csv
-
